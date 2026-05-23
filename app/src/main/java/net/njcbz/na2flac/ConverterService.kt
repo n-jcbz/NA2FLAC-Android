@@ -7,12 +7,12 @@ import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.os.Parcelable
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.io.File
 
 class ConverterService : Service() {
 
@@ -70,8 +70,18 @@ class ConverterService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val inputUri = intent?.getParcelableExtra<Uri>("inputUri")
-        val outputUri = intent?.getParcelableExtra<Uri>("outputUri")
+        val inputUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra("inputUri", Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent?.getParcelableExtra<Uri>("inputUri")
+        }
+        val outputUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra("outputUri", Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent?.getParcelableExtra<Uri>("outputUri")
+        }
 
         if (inputUri != null && outputUri != null) {
             val notification = createNotification("Initializing...", 0, 100)
@@ -95,7 +105,7 @@ class ConverterService : Service() {
                         outputRootUri = outputUri,
                         onProgress = { current, total, fileName ->
                             val now = System.currentTimeMillis()
-                            if (now - lastUpdate > 100 || current == total) {
+                            if (now - lastUpdate > 300 || current == total) {
                                 updateNotification("($current/$total) $fileName", current, total)
                                 _progressFlow.value = ProgressUpdate(current, total, fileName)
                                 lastUpdate = now
@@ -107,7 +117,12 @@ class ConverterService : Service() {
                     android.util.Log.e("NA2FLAC", "Service conversion error", e)
                 } finally {
                     isRunning = false
-                    stopForeground(true)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        stopForeground(true)
+                    }
                     stopSelf()
                 }
             }
@@ -133,7 +148,7 @@ class ConverterService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("NA2FLAC Converting")
             .setContentText(content)
-            .setSmallIcon(R.mipmap.ic_launcher_foreground) // Use foreground for notification icon
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setProgress(total, progress, false)
             .setOngoing(true)

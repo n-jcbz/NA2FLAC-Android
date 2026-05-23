@@ -159,7 +159,7 @@ object Converter {
                             context.contentResolver.openInputStream(file.uri)?.use { input ->
                                 srcFile.outputStream().use { output -> input.copyTo(output) }
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             failedCount.incrementAndGet()
                             completedCount.incrementAndGet()
                             return@launch

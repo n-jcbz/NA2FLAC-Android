@@ -6,20 +6,27 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -33,7 +40,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.launch
-import java.io.File
 
 // Colors matching the WPF app
 private val BgDark       = Color(0xFF121212)
@@ -53,24 +59,26 @@ class MainActivity : ComponentActivity() {
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
 
-        // Extract binaries once on first launch
-        val binDir = BinaryManager.setup(this)
-
         setContent {
-            NA2FLACApp(binDir)
+            NA2FLACApp()
         }
     }
 }
 
 @Composable
-fun NA2FLACApp(binDir: File) {
+fun NA2FLACApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Extract binaries once on first launch
+    LaunchedEffect(Unit) {
+        BinaryManager.setup(context)
+    }
 
     // State
     var inputUri    by remember { mutableStateOf<Uri?>(null) }
     var outputUri   by remember { mutableStateOf<Uri?>(null) }
-    var statusText  by remember { mutableStateOf("Status: Idle") }
+    var statusText  by remember { mutableStateOf("Status: Idle (${BuildConfig.FLAVOR.uppercase()} - ${BuildConfig.MAX_THREADS} Threads)") }
     var progress    by remember { mutableFloatStateOf(0f) }
     var scanResult  by remember { mutableStateOf<Converter.ScanResult?>(null) }
     var isWorking   by remember { mutableStateOf(false) }
@@ -164,8 +172,8 @@ fun NA2FLACApp(binDir: File) {
                     painter = painterResource(id = R.mipmap.ic_launcher_foreground),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(30.dp)
-                        .scale(1.5f),
+                        .size(45.dp)
+                        .scale(2f),
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit
                 )
                 Spacer(modifier = Modifier.width(5.dp))
@@ -184,6 +192,8 @@ fun NA2FLACApp(binDir: File) {
                 onBrowse = { inputPicker.launch(null) }
             )
 
+            Spacer(modifier = Modifier.height(2.dp))
+
             // Scan / Convert buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -191,7 +201,7 @@ fun NA2FLACApp(binDir: File) {
             ) {
                 NA2Button(
                     text = "Scan",
-                    modifier = Modifier.width(180.dp),
+                    modifier = Modifier.width(166.dp),
                     enabled = inputUri != null && !isWorking
                 ) {
                     scope.launch {
@@ -220,7 +230,7 @@ fun NA2FLACApp(binDir: File) {
                 Spacer(modifier = Modifier.width(10.dp))
                 NA2Button(
                     text = "Convert",
-                    modifier = Modifier.width(180.dp),
+                    modifier = Modifier.width(166.dp),
                     enabled = scanResult != null && scanResult!!.files.isNotEmpty() && !isWorking
                 ) {
                     if (inputUri != null) {
@@ -231,6 +241,8 @@ fun NA2FLACApp(binDir: File) {
                 }
             }
 
+            Spacer(modifier = Modifier.height(2.dp))
+
             // Output folder row
             FolderRow(
                 label = "Output",
@@ -238,19 +250,49 @@ fun NA2FLACApp(binDir: File) {
                 onBrowse = { outputPicker.launch(null) }
             )
 
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Open Output button
+            NA2Button(
+                text = "Open Output Folder",
+                modifier = Modifier.fillMaxWidth(),
+                enabled = outputUri != null
+            ) {
+                // To open a specific SAF folder, we need to build a document URI from the tree URI
+                val rootDocId = DocumentsContract.getTreeDocumentId(outputUri!!)
+                val docUri = DocumentsContract.buildDocumentUriUsingTree(outputUri, rootDocId)
+                
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(docUri, "vnd.android.document/directory")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (_: Exception) {
+                    statusText = "Status: No file manager found to open folder."
+                }
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
             // Progress bar
-            LinearProgressIndicator(
-                progress = { progress },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(25.dp)
-                    .border(1.dp, BorderGray, RoundedCornerShape(12.dp)),
-                color = Teal,
-                trackColor = SurfaceDark,
-                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-            )
+                    .background(SurfaceDark, RoundedCornerShape(12.dp))
+                    .border(1.dp, BorderGray, RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                if (progress > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progress)
+                            .background(Teal, RoundedCornerShape(12.dp))
+                    )
+                }
+            }
 
             // Status box
             Box(
@@ -263,7 +305,7 @@ fun NA2FLACApp(binDir: File) {
                 Text(
                     text = statusText,
                     color = TextWhite,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -277,25 +319,25 @@ fun FolderRow(label: String, uri: Uri?, onBrowse: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(
             modifier = Modifier
                 .weight(1f)
-                .background(SurfaceDark, RoundedCornerShape(5.dp))
-                .border(1.dp, BorderGray, RoundedCornerShape(5.dp))
-                .padding(horizontal = 8.dp, vertical = 8.dp)
+                .background(SurfaceDark, RoundedCornerShape(20.dp))
+                .border(1.dp, BorderGray, RoundedCornerShape(20.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
             Text(
-                text = uri?.lastPathSegment ?: "Enter $label directory here...",
+                text = uri?.lastPathSegment ?: "$label directory",
                 color = if (uri != null) TextWhite else TextMuted,
-                fontSize = 13.sp,
+                fontSize = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
         NA2Button(
-            text = "Browse $label...",
+            text = "Select $label",
             onClick = onBrowse,
             modifier = Modifier.width(120.dp)
         )
@@ -309,20 +351,36 @@ fun NA2Button(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    val borderColor by animateColorAsState(
+        targetValue = if (isPressed) Teal else BorderGray,
+        animationSpec = tween(durationMillis = 250),
+        label = "buttonBorderColor"
+    )
+
+    val borderThickness by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 1.dp,
+        animationSpec = tween(durationMillis = 250),
+        label = "buttonBorderThickness"
+    )
+
     Button(
         onClick = onClick,
         enabled = enabled,
+        interactionSource = interactionSource,
         modifier = modifier.height(34.dp),
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
-        shape = RoundedCornerShape(5.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFF333333),
             contentColor = TextWhite,
             disabledContainerColor = Color(0xFF222222),
             disabledContentColor = TextMuted
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderGray)
+        border = androidx.compose.foundation.BorderStroke(borderThickness, borderColor)
     ) {
-        Text(text = text, fontSize = 14.sp)
+        Text(text = text, fontSize = 16.sp)
     }
 }
