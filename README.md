@@ -75,7 +75,7 @@ NA2FLAC is an audio conversion tool that scans and converts Nintendo audio forma
 
 - FFmpeg and FFprobe by the FFmpeg developers  
 - VGMStream by the VGMStream team
-- Prebuilt FFmpeg binary for Android by [Khang-NT](https://https://github.com/Khang-NT), see the repository [here](https://github.com/Khang-NT/ffmpeg-binary-android)
+- [Prebuilt Android FFmpeg binary](https://github.com/Khang-NT/ffmpeg-binary-android) by [Khang-NT](https://https://github.com/Khang-NT)
 - [NA2FLAC](https://github.com/n-jcbz/NA2FLAC) by n.jcbz
 
 ---
