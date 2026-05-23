@@ -63,5 +63,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: vgmstream-cli-android-arm64
-          path: vgmstream/build/vgmstream-cli
+          path: vgmstream/build/cli/vgmstream-cli
           retention-days: 30
