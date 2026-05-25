@@ -63,7 +63,7 @@ NA2FLAC is an audio conversion tool that scans and converts Nintendo audio forma
 
 ## Licenses
 
-- **NA2FLAC** — MIT License (see `licenses/LICENSE.txt`)  
+- **NA2FLAC** — MIT License (see `LICENSE.txt`)  
 - **FFmpeg** — GNU GPL v3 (see `licenses/FFMPEG_COPYING.GPLv3.md` and `licenses/FFMPEG_LICENSE.md`)  
   Visit [https://ffmpeg.org](https://ffmpeg.org)  
 - **VGMStream** — MIT License (see `licenses/VGMSTREAM_COPYING.md`)  
