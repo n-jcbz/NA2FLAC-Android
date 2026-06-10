@@ -27,6 +27,7 @@ NA2FLAC is an audio conversion tool that scans and converts Nintendo audio forma
 
 - **Intelligent channel handling**
   - Files split into `_l` (left) and `_r` (right) channels are automatically detected and merged into a single stereo track where appropriate.
+  - Files with up to 8 channels are converted into FLAC. Files with more than 8 channels are kept as WAV.¹
 
 - **Organized output with preserved folder tree**
   - Converted files are placed into a mirrored `converted` folder that preserves the original folder structure.
@@ -47,9 +48,10 @@ NA2FLAC is an audio conversion tool that scans and converts Nintendo audio forma
   - A log file is created and moved into the `converted` folder after conversion
  
 - **Background conversion**
-  - NA2FLAC will also run in the background whenever you're doing something else while converting files.*
- 
-###### *Running in the background will result in a slower conversion.
+  - NA2FLAC will also run in the background whenever you're doing something else while converting files.²
+
+###### ¹ Not all music players support files with a high channel-count.
+###### ² Running in the background will result in a slower conversion.
 
 ---
 
