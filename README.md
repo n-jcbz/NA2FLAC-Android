@@ -36,11 +36,20 @@ NA2FLAC is an audio conversion tool that scans and converts Nintendo audio forma
   - Scans report `original -> ~estimated after conversion` using per-format heuristics to give a reasonable range for final FLAC size.
 
 - **Per-file progress**
-  - Both builds display a `(N/Total) Processing ...` counter while converting.
+  - Displays a `(N/Total) Processing ...` counter while converting.
+  - Progress is also shown via a notification.
 
 - **Automatic cleanup**
   - WAV intermediate files are deleted automatically when a FLAC is created successfully.
   - WAVs are kept if conversion fails or if the file has too many channels.
+ 
+- **Conversion logging**
+  - A log file is created and moved into the `converted` folder after conversion
+ 
+- **Background conversion**
+  - NA2FLAC will also run in the background whenever you're doing something else while converting files.*
+ 
+###### *Running in the background will result in a slower conversion.
 
 ---
 
@@ -57,7 +66,7 @@ NA2FLAC is an audio conversion tool that scans and converts Nintendo audio forma
 ## Requirements
 
 - ARM64 Android 8.0 or later  
-- No separate install needed for ffmpeg/vgmstream — they are bundled in the app itself.
+- No separate install needed for ffmpeg/ffprobe/vgmstream — they are bundled in the app itself.
 
 ---
 
@@ -76,6 +85,7 @@ NA2FLAC is an audio conversion tool that scans and converts Nintendo audio forma
 - FFmpeg by the FFmpeg developers  
 - VGMStream by the VGMStream team
 - [Prebuilt Android FFmpeg binary](https://github.com/Khang-NT/ffmpeg-binary-android) by [Khang-NT](https://https://github.com/Khang-NT)
+- [Prebuilt Android FFprobe binary](https://github.com/hzw1199/Android-FFmpeg-Prebuilt) (file found [here](https://github.com/hzw1199/Android-FFmpeg-Prebuilt/tree/main/ffmpeg-8.1.1/bin)) by [hzw1199](https://github.com/hzw1199)
 - [NA2FLAC](https://github.com/n-jcbz/NA2FLAC) by n.jcbz
 
 ---
