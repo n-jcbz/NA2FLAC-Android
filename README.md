@@ -11,8 +11,10 @@ NA2FLAC is an audio conversion tool that scans and converts Nintendo audio forma
 - **Android:**
   - **Standard** — uses up to 4 threads*
   - **Turbo** — uses up to 8 threads*
-- **WPF build** — modern .NET 8 WPF UI with folder selection, output folder option, progress bar, and status text. Designed for easy, visual conversion and to work from any selected input/output folder.
-- **Legacy build** — original batch script simply ported to C# as a console application, matching the original v1.2.1 behaviour for users who prefer the simple console workflow.
+ 
+- **C#:**
+  - **WPF build** — modern .NET 8 WPF UI with folder selection, output folder option, progress bar, and status text. Designed for easy, visual conversion and to work from any selected input/output folder.
+  - **Legacy build** — original batch script simply ported to C# as a console application, matching the original v1.2.1 behaviour for users who prefer the simple console workflow.
 
 ##### Check the main repository of [NA2FLAC](https://github.com/n-jcbz/NA2FLAC) for the other builds.
 
