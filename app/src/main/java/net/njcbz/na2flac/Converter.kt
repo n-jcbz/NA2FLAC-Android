@@ -296,7 +296,6 @@ object Converter {
             }
         }
 
-        cacheDir.deleteRecursively()
         val result = ConvertResult(convertedCount.get(), wavKeptCount.get(), failedCount.get(), System.currentTimeMillis() - startMs)
         
         logToFile(logFile, "\n----------------------------------------------------------")
@@ -310,6 +309,8 @@ object Converter {
 
         writeToOutput(context, logFile, outputRootUri, convertedFolderUri, "", "conversion_log.txt")
         logFile.delete()
+
+        cacheDir.deleteRecursively()
         
         result
     }
