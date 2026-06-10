@@ -82,6 +82,7 @@ fun NA2FLACApp() {
     var progress    by remember { mutableFloatStateOf(0f) }
     var scanResult  by remember { mutableStateOf<Converter.ScanResult?>(null) }
     var isWorking   by remember { mutableStateOf(false) }
+    var conversionStarted by remember { mutableStateOf(false) }
 
     // Sync progress from Service
     val serviceProgress by ConverterService.progressFlow.collectAsState()
@@ -89,13 +90,13 @@ fun NA2FLACApp() {
     LaunchedEffect(serviceProgress) {
         if (serviceProgress.total > 0) {
             progress = serviceProgress.current.toFloat() / serviceProgress.total.toFloat()
-            statusText = "Status: (${serviceProgress.current}/${serviceProgress.total}) ${serviceProgress.fileName}"
+            statusText = "(${serviceProgress.current}/${serviceProgress.total}) ${serviceProgress.fileName}"
         }
         if (serviceProgress.isFinished && serviceProgress.result != null) {
             val result = serviceProgress.result!!
             val mins = result.elapsedMs / 60000
             val secs = (result.elapsedMs % 60000) / 1000
-            statusText = "Status: Done! FLAC: ${result.converted}, " +
+            statusText = "Done! FLAC: ${result.converted}, " +
                     "WAV kept: ${result.wavKept}, " +
                     "Failed: ${result.failed}  –  ${mins}m ${secs}s"
             progress = 1f
@@ -132,7 +133,7 @@ fun NA2FLACApp() {
             }
             scanResult = null
             progress = 0f
-            statusText = "Status: Folder selected. Tap Scan."
+            statusText = "Folder selected. Tap Scan."
         }
     }
 
@@ -206,23 +207,23 @@ fun NA2FLACApp() {
                 ) {
                     scope.launch {
                         isWorking = true
-                        statusText = "Status: Scanning..."
+                        statusText = "Scanning..."
                         try {
                             val result = Converter.scan(context, inputUri!!)
                             scanResult = result
 
                             if (result.files.isEmpty()) {
-                                statusText = "Status: No supported files found."
+                                statusText = "No supported files found."
                             } else {
                                 val countMsg = result.countByExt.entries
                                     .sortedBy { it.key }
                                     .joinToString(" · ") { "${it.value} ${it.key.uppercase()}" }
-                                statusText = "Status: $countMsg, ${result.files.size} total  –  " +
+                                statusText = "$countMsg, ${result.files.size} total  –  " +
                                         "${Converter.formatSize(result.totalBytes)} → " +
                                         "~${Converter.formatSize(result.estimatedBytes)} after conversion"
                             }
                         } catch (e: Exception) {
-                            statusText = "Status: Scan error: ${e.message}"
+                            statusText = "Scan error: ${e.message}"
                         }
                         isWorking = false
                     }
@@ -235,6 +236,7 @@ fun NA2FLACApp() {
                 ) {
                     if (inputUri != null) {
                         isWorking = true
+                        conversionStarted = true
                         progress = 0f
                         ConverterService.start(context, inputUri!!, outputUri ?: inputUri!!)
                     }
@@ -260,16 +262,44 @@ fun NA2FLACApp() {
             ) {
                 // To open a specific SAF folder, we need to build a document URI from the tree URI
                 val rootDocId = DocumentsContract.getTreeDocumentId(outputUri!!)
-                val docUri = DocumentsContract.buildDocumentUriUsingTree(outputUri, rootDocId)
                 
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(docUri, "vnd.android.document/directory")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                try {
-                    context.startActivity(intent)
-                } catch (_: Exception) {
-                    statusText = "Status: No file manager found to open folder."
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    var targetDocId = rootDocId
+                    
+                    if (conversionStarted) {
+                        // Try to find the "converted" folder to open it directly
+                        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(outputUri!!, rootDocId)
+                        try {
+                            context.contentResolver.query(
+                                childrenUri,
+                                arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+                                null, null, null
+                            )?.use { cursor ->
+                                while (cursor.moveToNext()) {
+                                    if (cursor.getString(1) == "converted") {
+                                        targetDocId = cursor.getString(0)
+                                        break
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("NA2FLAC", "Error finding converted folder", e)
+                        }
+                    }
+
+                    val docUri = DocumentsContract.buildDocumentUriUsingTree(outputUri!!, targetDocId)
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(docUri, "vnd.android.document/directory")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    try {
+                        context.startActivity(intent)
+                    } catch (_: Exception) {
+                        // Switch back to Main to update UI
+                        launch(kotlinx.coroutines.Dispatchers.Main) {
+                            statusText = "No file manager found to open folder."
+                        }
+                    }
                 }
             }
 
